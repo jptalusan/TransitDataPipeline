@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import pytz
 from src.base_logger import *
+from pathlib import Path
 
 
 def get_weather_data(
@@ -12,7 +13,7 @@ def get_weather_data(
     endDate="20190301",
     number=2,
     timezone="US/Central",
-    save_dir="./data/weather",
+    save_dir=None,
 ):
     """
     Retrieve historical weather data from the Weather.com API for a specified location.
@@ -65,6 +66,7 @@ def get_weather_data(
 
         endpoint = f"https://api.weather.com/v1/location/{weather_station}:{number}:{country_code}/observations/historical.json?apiKey={apiKey}&units=e&startDate={s}&endDate={e}"
         response = requests.get(endpoint).json()["observations"]
+        location = f"{response[0]['obs_name']}".replace("/", "_")
         weather_data = sorted(response, key=lambda k: k["valid_time_gmt"])
 
         header = [
@@ -101,4 +103,10 @@ def get_weather_data(
         weather_dfs.append(weather_df)
 
     weather_dfs = pd.concat(weather_dfs)
+
+    if save_dir:
+        Path(f"{save_dir}").mkdir(parents=True, exist_ok=True)
+        weather_dfs.to_csv(
+            f"{save_dir}/{location}_{weather_station}_{country_code}_{startDate}_{endDate}.csv", index=False
+        )
     return weather_dfs
